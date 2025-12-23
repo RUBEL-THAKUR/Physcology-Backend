@@ -13,8 +13,4 @@ public class LoginRequest {
     private String mobileNumber; // Optional for OTP login
     private  String otp;   // OTP value
 
-
-
-
-
 }
