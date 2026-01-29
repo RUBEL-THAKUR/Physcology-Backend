@@ -1,5 +1,6 @@
 package com.healthcare.bean.security;
 
+import com.healthcare.bean.security.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -27,15 +28,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
 
         if (header != null && header.startsWith("Bearer ")) {
+            try {
+                String token = header.substring(7);
+                String username = jwtUtil.extractUsername(token);
 
-            String token = header.substring(7);
-            String username = jwtUtil.extractUsername(token);
-
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(
-                            username, null, Collections.emptyList());
-
-            SecurityContextHolder.getContext().setAuthentication(auth);
+                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                    UsernamePasswordAuthenticationToken auth =
+                            new UsernamePasswordAuthenticationToken(
+                                    username, null, Collections.emptyList());
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                }
+            } catch (Exception e) {
+                System.out.println("JWT Token validation failed: " + e.getMessage());
+                // Don't throw exception, just continue - permitAll endpoints should still work
+            }
         }
 
         filterChain.doFilter(request, response);

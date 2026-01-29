@@ -32,7 +32,6 @@ public class TherapistProfileBasicInfoRequest {
     private String presentDistrict;
     private String presentPinCode;
 
-    // 🔥 EXACT NAME (NO "is" PREFIX)
     private boolean sameAsPresentAddress;
 
     private String clinicAddress;

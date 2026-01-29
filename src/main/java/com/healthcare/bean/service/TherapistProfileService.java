@@ -1,23 +1,45 @@
 package com.healthcare.bean.service;
 
 import com.healthcare.bean.dto.TherapistProfileBasicInfoRequest;
+import com.healthcare.bean.model.Therapist;
 import com.healthcare.bean.model.TherapistProfile;
 import com.healthcare.bean.repository.TherapistProfileRepository;
+import com.healthcare.bean.repository.TherapistRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 public class TherapistProfileService {
 
     private final TherapistProfileRepository repository;
+    private final TherapistRepository therapistRepository;
 
-    public TherapistProfileService(TherapistProfileRepository repository) {
+    public TherapistProfileService(
+            TherapistProfileRepository repository,
+            TherapistRepository therapistRepository) {
         this.repository = repository;
+        this.therapistRepository = therapistRepository;
     }
 
+    @Transactional
     public TherapistProfile saveBasicInfo(
+            UUID therapistId,
             TherapistProfileBasicInfoRequest req) {
 
-        TherapistProfile profile = new TherapistProfile();
+        Therapist therapist = therapistRepository.findById(therapistId)
+                .orElseThrow(() ->
+                        new RuntimeException("Therapist not found with ID: " + therapistId));
+
+        // Check if profile already exists for this therapist
+        TherapistProfile profile = repository.findByTherapistId(therapistId)
+                .orElse(new TherapistProfile());
+
+        // Set therapist (for new profile)
+        if (profile.getId() == null) {
+            profile.setTherapist(therapist);
+        }
 
         profile.setPrefix(req.getPrefix());
         profile.setFirstName(req.getFirstName());
@@ -59,5 +81,19 @@ public class TherapistProfileService {
         profile.setExperience(req.getExperience());
 
         return repository.save(profile);
+    }
+
+    public TherapistProfile getBasicInfo(UUID therapistId) {
+        return repository.findByTherapistId(therapistId)
+                .orElseThrow(() ->
+                        new RuntimeException("Profile not found for therapist ID: " + therapistId));
+    }
+
+    @Transactional
+    public void deleteBasicInfo(UUID therapistId) {
+        TherapistProfile profile = repository.findByTherapistId(therapistId)
+                .orElseThrow(() ->
+                        new RuntimeException("Profile not found for therapist ID: " + therapistId));
+        repository.delete(profile);
     }
 }

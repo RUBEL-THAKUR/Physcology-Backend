@@ -1,35 +1,27 @@
-// Location: src/main/java/com/healthcare/bean/controller/TherapistController.java
-
 package com.healthcare.bean.controller;
 
-import com.healthcare.bean.dto.TherapistSignupRequest;
-import com.healthcare.bean.model.Therapist;
+import com.healthcare.bean.dto.*;
 import com.healthcare.bean.model.TherapistStatus;
 import com.healthcare.bean.service.TherapistService;
-import com.healthcare.bean.repository.TherapistRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/therapist")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class TherapistController {
 
-    @Autowired
-    private TherapistService therapistService;
+    private final TherapistService therapistService;
 
-    @Autowired
-    private TherapistRepository therapistRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
+    // SIGNUP
     @PostMapping("/signup")
     public ResponseEntity<?> signupTherapist(
             @RequestParam("firstName") String firstName,
@@ -51,14 +43,14 @@ public class TherapistController {
             request.setAbove18(isAbove18);
             request.setAcceptedTerms(acceptedTerms);
 
-            Therapist therapist = therapistService.signupTherapist(request, cvFile);
+            TherapistResponseDTO response = therapistService.signupTherapist(request, cvFile);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Therapist registered successfully. Your application is pending approval.");
-            response.put("therapistId", therapist.getId());
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "Therapist registered successfully. Your application is pending approval.");
+            result.put("data", response);
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(result);
 
         } catch (IllegalArgumentException e) {
             Map<String, Object> error = new HashMap<>();
@@ -74,47 +66,82 @@ public class TherapistController {
         }
     }
 
-    // JSON API for testing (without file upload)
-    @PostMapping("/signup-json")
-    public ResponseEntity<?> signupTherapistJSON(@RequestBody TherapistSignupRequest request) {
+    // LOGIN
+    @PostMapping("/login")
+    public ResponseEntity<?> loginTherapist(@RequestBody TherapistLoginRequest request) {
         try {
-            if (therapistRepository.existsByEmailId(request.getEmailId())) {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Email already registered"));
-            }
+            TherapistResponseDTO response = therapistService.loginTherapist(request);
 
-            if (therapistRepository.existsByMobileNumber(request.getMobileNumber())) {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Mobile number already registered"));
-            }
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "Login successful");
+            result.put("data", response);
 
-            if (!request.isAbove18()) {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "You must be above 18 years"));
-            }
+            return ResponseEntity.ok(result);
 
-            if (!request.isAcceptedTerms()) {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "You must accept terms and conditions"));
-            }
-
-            Therapist therapist = new Therapist();
-            therapist.setFirstName(request.getFirstName());
-            therapist.setLastName(request.getLastName());
-            therapist.setEmailId(request.getEmailId());
-            therapist.setPassword(passwordEncoder.encode(request.getPassword())); // ENCRYPTED
-            therapist.setMobileNumber(request.getMobileNumber());
-            therapist.setCvFileName("pending-upload.pdf");
-            therapist.setAbove18(request.isAbove18());
-            therapist.setAcceptedTerms(request.isAcceptedTerms());
-            therapist.setStatus(TherapistStatus.PENDING);
-
-            Therapist saved = therapistRepository.save(therapist);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Therapist registered successfully (CV pending)",
-                    "therapistId", saved.getId()
-            ));
-
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Error: " + e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         }
+    }
+
+    // GET BY ID
+    @GetMapping("/{id}")
+    public ResponseEntity<TherapistResponseDTO> getTherapistById(@PathVariable UUID id) {
+        TherapistResponseDTO response = therapistService.getTherapistById(id);
+        return ResponseEntity.ok(response);
+    }
+
+    // GET ALL
+    @GetMapping
+    public ResponseEntity<List<TherapistResponseDTO>> getAllTherapists() {
+        List<TherapistResponseDTO> therapists = therapistService.getAllTherapists();
+        return ResponseEntity.ok(therapists);
+    }
+
+    // GET BY STATUS
+    @GetMapping("/status/{status}")
+    public ResponseEntity<List<TherapistResponseDTO>> getTherapistsByStatus(@PathVariable TherapistStatus status) {
+        List<TherapistResponseDTO> therapists = therapistService.getTherapistsByStatus(status);
+        return ResponseEntity.ok(therapists);
+    }
+
+    // UPDATE
+    @PutMapping("/{id}")
+    public ResponseEntity<TherapistResponseDTO> updateTherapist(
+            @PathVariable UUID id,
+            @RequestBody TherapistUpdateRequest request
+    ) {
+        TherapistResponseDTO response = therapistService.updateTherapist(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    // DELETE
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteTherapist(@PathVariable UUID id) {
+        therapistService.deleteTherapist(id);
+        return ResponseEntity.ok("Therapist deleted successfully");
+    }
+
+    // APPROVE THERAPIST
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<TherapistResponseDTO> approveTherapist(
+            @PathVariable UUID id,
+            @RequestParam String approvedBy
+    ) {
+        TherapistResponseDTO response = therapistService.updateStatus(id, TherapistStatus.APPROVED, null, approvedBy);
+        return ResponseEntity.ok(response);
+    }
+
+    // REJECT THERAPIST
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<TherapistResponseDTO> rejectTherapist(
+            @PathVariable UUID id,
+            @RequestParam String reason
+    ) {
+        TherapistResponseDTO response = therapistService.updateStatus(id, TherapistStatus.REJECTED, reason, null);
+        return ResponseEntity.ok(response);
     }
 }

@@ -1,10 +1,12 @@
 package com.healthcare.bean.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDate;
 
 @Entity
@@ -18,6 +20,16 @@ public class TherapistProfile {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @JsonIgnore
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "therapist_id",
+            referencedColumnName = "id",
+            nullable = false,
+            unique = true
+    )
+    private Therapist therapist;
 
     private String prefix;
     private String firstName;
