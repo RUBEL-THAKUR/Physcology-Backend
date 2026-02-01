@@ -16,30 +16,6 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
-
-//    @Bean
-//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-//        http
-//                .csrf(csrf -> csrf.disable())
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/api/users/signup", "/api/users/login").permitAll()
-//                        .requestMatchers("/api/users/request-otp", "/api/users/verify-otp").permitAll()
-//                        .requestMatchers("/api/psychologists/**").permitAll()
-//                        .requestMatchers("/api/appointments/**").permitAll()
-//                        .requestMatchers("/api/therapist/**").permitAll()
-//                        .requestMatchers("/api/profile/**").permitAll()
-//                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-//                        .requestMatchers("/actuator/**").permitAll()
-//                        .anyRequest().authenticated()
-//                )
-//                .sessionManagement(session ->
-//                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-//                )
-//                // ✅ JWT Filter add karo
-//                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-//
-//        return http.build();
-//    }
 @Bean
 public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
