@@ -70,7 +70,8 @@ public class TherapistController {
     @PostMapping("/login")
     public ResponseEntity<?> loginTherapist(@RequestBody TherapistLoginRequest request) {
         try {
-            TherapistResponseDTO response = therapistService.loginTherapist(request);
+            TherapistLoginResponseDTO response = therapistService.loginTherapist(request);
+
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);

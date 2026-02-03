@@ -7,12 +7,16 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Repository for therapist bank details.
+ */
 @Repository
-public interface TherapistBankDetailsRepository extends JpaRepository<TherapistBankDetails, Long> {
+public interface TherapistBankDetailsRepository
+        extends JpaRepository<TherapistBankDetails, Long> {
 
+    Optional<TherapistBankDetails> findByTherapist_Id(UUID therapistId);
 
-    Optional<TherapistBankDetails> findByTherapistId(UUID therapistId);
+    boolean existsByTherapist_Id(UUID therapistId);
 
-
-    boolean existsByTherapistId(UUID therapistId);
+    int deleteByTherapist_Id(UUID therapistId);
 }

@@ -1,71 +1,99 @@
 package com.healthcare.bean.service;
 
 import com.healthcare.bean.dto.TherapistSpecializationDTO;
+import com.healthcare.bean.dto.TherapistSpecializationResponse;
 import com.healthcare.bean.model.Therapist;
 import com.healthcare.bean.model.TherapistSpecialization;
 import com.healthcare.bean.repository.TherapistRepository;
 import com.healthcare.bean.repository.TherapistSpecializationRepository;
+import com.healthcare.bean.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
+/**
+ * Service for managing therapist specializations.
+ * Therapist ownership is resolved securely using JWT.
+ */
 @Service
 @RequiredArgsConstructor
 public class TherapistSpecializationService {
 
     private final TherapistSpecializationRepository specializationRepository;
-    // ✅ TherapistProfileRepository hata ke TherapistRepository
     private final TherapistRepository therapistRepository;
+    private final JwtUtil jwtUtil;
 
     /**
-     * Add or Update specializations
-     * Deletes old ones and adds new ones to avoid duplicates
+     * Add or update specializations for logged-in therapist.
+     * Existing specializations are removed before inserting new ones.
      */
     @Transactional
-    public List<TherapistSpecialization> addOrUpdateSpecializations(
+    public List<TherapistSpecializationResponse> addOrUpdateSpecializations(
+            String token,
             TherapistSpecializationDTO dto
     ) {
-        // ✅ Find Therapist (UUID)
-        Therapist therapist = therapistRepository.findById(dto.getTherapistId())
-                .orElseThrow(() -> new RuntimeException(
-                        "Therapist with ID " + dto.getTherapistId() + " not found"
-                ));
+        UUID therapistId = jwtUtil.extractTherapistId(token);
 
-        // ✅ Delete existing specializations
-        specializationRepository.deleteByTherapistId(dto.getTherapistId());
+        Therapist therapist = therapistRepository.findById(therapistId)
+                .orElseThrow(() -> new RuntimeException("Therapist not found"));
 
-        // ✅ Create new specializations
-        List<TherapistSpecialization> specializationList = dto.getSpecializations()
+        // Remove existing specializations
+        specializationRepository.deleteByTherapist_Id(therapistId);
+
+        // Save new specializations
+        List<TherapistSpecialization> saved =
+                dto.getSpecializations()
+                        .stream()
+                        .map(spec -> {
+                            TherapistSpecialization s =
+                                    new TherapistSpecialization();
+                            s.setSpecializationName(spec.toUpperCase());
+                            s.setTherapist(therapist);
+                            return s;
+                        })
+                        .toList();
+
+        return specializationRepository.saveAll(saved)
                 .stream()
-                .map(spec -> {
-                    TherapistSpecialization specialization = new TherapistSpecialization();
-                    specialization.setSpecializationName(spec.toUpperCase());
-                    specialization.setTherapist(therapist); // ✅ Therapist set kiya
-                    return specialization;
+                .map(s -> {
+                    TherapistSpecializationResponse r =
+                            new TherapistSpecializationResponse();
+                    r.setId(s.getId());
+                    r.setSpecializationName(s.getSpecializationName());
+                    return r;
                 })
-                .collect(Collectors.toList());
-
-        return specializationRepository.saveAll(specializationList);
+                .toList();
     }
 
     /**
-     * Get all specializations for a therapist
+     * Get all specializations of logged-in therapist.
      */
-    public List<TherapistSpecialization> getAllSpecializations(UUID therapistId) {
-        // ✅ UUID parameter
-        return specializationRepository.findByTherapistId(therapistId);
+    public List<TherapistSpecializationResponse> getAllSpecializations(
+            String token
+    ) {
+        UUID therapistId = jwtUtil.extractTherapistId(token);
+
+        return specializationRepository.findByTherapist_Id(therapistId)
+                .stream()
+                .map(s -> {
+                    TherapistSpecializationResponse r =
+                            new TherapistSpecializationResponse();
+                    r.setId(s.getId());
+                    r.setSpecializationName(s.getSpecializationName());
+                    return r;
+                })
+                .toList();
     }
 
     /**
-     * Delete all specializations for a therapist
+     * Delete all specializations of logged-in therapist.
      */
     @Transactional
-    public void deleteAllSpecializations(UUID therapistId) {
-        // ✅ UUID parameter
-        specializationRepository.deleteByTherapistId(therapistId);
+    public void deleteAllSpecializations(String token) {
+        UUID therapistId = jwtUtil.extractTherapistId(token);
+        specializationRepository.deleteByTherapist_Id(therapistId);
     }
 }

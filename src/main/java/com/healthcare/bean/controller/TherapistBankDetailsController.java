@@ -2,6 +2,7 @@ package com.healthcare.bean.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthcare.bean.dto.TherapistBankDetailsDTO;
+import com.healthcare.bean.dto.TherapistBankDetailsResponse;
 import com.healthcare.bean.model.TherapistBankDetails;
 import com.healthcare.bean.service.TherapistBankDetailsService;
 import lombok.RequiredArgsConstructor;
@@ -10,9 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Optional;
-import java.util.UUID;
-
+/**
+ * REST controller for therapist bank details.
+ */
 @RestController
 @RequestMapping("/api/therapist/bank-details")
 @RequiredArgsConstructor
@@ -21,71 +22,53 @@ public class TherapistBankDetailsController {
     private final TherapistBankDetailsService bankDetailsService;
 
     /**
-     * POST: Add or Update bank details
-     * Endpoint: /api/therapist/bank-details
+     * Add or update bank details for logged-in therapist.
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> addOrUpdateBankDetails(
+    public ResponseEntity<TherapistBankDetails> addOrUpdateBankDetails(
+            @RequestHeader("Authorization") String authHeader,
             @RequestPart("data") String dataJson,
             @RequestPart(value = "bankDocument", required = false) MultipartFile bankDocument,
             @RequestPart(value = "panDocument", required = false) MultipartFile panDocument,
             @RequestPart(value = "aadhaarDocument", required = false) MultipartFile aadhaarDocument
-    ) {
-        try {
-            System.out.println("🏦 BANK DETAILS CONTROLLER HIT");
-            System.out.println("JSON received: " + dataJson);
+    ) throws Exception {
 
-            // Parse JSON to DTO
-            ObjectMapper mapper = new ObjectMapper();
-            TherapistBankDetailsDTO dto = mapper.readValue(dataJson, TherapistBankDetailsDTO.class);
+        ObjectMapper mapper = new ObjectMapper();
+        TherapistBankDetailsDTO dto =
+                mapper.readValue(dataJson, TherapistBankDetailsDTO.class);
 
-            System.out.println("DTO: " + dto);
-            System.out.println("Bank Document: " + (bankDocument != null ? bankDocument.getOriginalFilename() : "null"));
-            System.out.println("PAN Document: " + (panDocument != null ? panDocument.getOriginalFilename() : "null"));
-            System.out.println("Aadhaar Document: " + (aadhaarDocument != null ? aadhaarDocument.getOriginalFilename() : "null"));
+        String token = authHeader.substring(7);
 
-            TherapistBankDetails saved = bankDetailsService.addOrUpdateBankDetails(
-                    dto, bankDocument, panDocument, aadhaarDocument
-            );
-
-            return ResponseEntity.ok(saved);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        }
+        return ResponseEntity.ok(
+                bankDetailsService.addOrUpdateBankDetails(
+                        token, dto,
+                        bankDocument, panDocument, aadhaarDocument)
+        );
     }
 
     /**
-     * GET: Get bank details by therapist ID
-     * Endpoint: /api/therapist/bank-details/{therapistId}
+     * Get bank details of logged-in therapist.
      */
-    @GetMapping("/{therapistId}")
-    public ResponseEntity<?> getBankDetails(
-            @PathVariable UUID therapistId // ✅ UUID parameter
+    @GetMapping
+    public ResponseEntity<TherapistBankDetailsResponse> getBankDetails(
+            @RequestHeader("Authorization") String authHeader
     ) {
-        Optional<TherapistBankDetails> details = bankDetailsService.getBankDetails(therapistId);
-
-        if (details.isPresent()) {
-            return ResponseEntity.ok(details.get());
-        } else {
-            return ResponseEntity.ok("No bank details found for this therapist");
-        }
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(
+                bankDetailsService.getBankDetails(token)
+        );
     }
 
     /**
-     * DELETE: Delete bank details
-     * Endpoint: /api/therapist/bank-details/{therapistId}
+     * Delete bank details of logged-in therapist.
      */
-    @DeleteMapping("/{therapistId}")
+    @DeleteMapping
     public ResponseEntity<String> deleteBankDetails(
-            @PathVariable UUID therapistId // ✅ UUID parameter
+            @RequestHeader("Authorization") String authHeader
     ) {
-        try {
-            bankDetailsService.deleteBankDetails(therapistId);
-            return ResponseEntity.ok("Bank details deleted successfully");
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        String token = authHeader.substring(7);
+        bankDetailsService.deleteBankDetails(token);
+        return ResponseEntity.ok(
+                "Bank details deleted successfully");
     }
 }

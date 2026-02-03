@@ -1,9 +1,9 @@
 package com.healthcare.bean.controller;
 
+import com.healthcare.bean.constant.AppConstants;
 import com.healthcare.bean.dto.AppointmentDTO;
 import com.healthcare.bean.model.Appointment;
 import com.healthcare.bean.service.AppointmentService;
-import com.healthcare.bean.util.AppConstants;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

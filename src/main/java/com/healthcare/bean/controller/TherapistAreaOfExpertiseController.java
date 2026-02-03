@@ -1,15 +1,17 @@
 package com.healthcare.bean.controller;
 
 import com.healthcare.bean.dto.TherapistAreaOfExpertiseDTO;
-import com.healthcare.bean.model.TherapistAreaOfExpertise;
+import com.healthcare.bean.dto.TherapistAreaOfExpertiseResponse;
 import com.healthcare.bean.service.TherapistAreaOfExpertiseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
+/**
+ * REST controller for therapist expertise onboarding.
+ */
 @RestController
 @RequestMapping("/api/therapist/expertise")
 @RequiredArgsConstructor
@@ -18,52 +20,41 @@ public class TherapistAreaOfExpertiseController {
     private final TherapistAreaOfExpertiseService expertiseService;
 
     /**
-     * POST: Add or Update expertise areas
-     * Endpoint: /api/therapist/expertise
-     * Body: { "therapistId": "550e8400-e29b-41d4-a716-446655440000", "expertiseAreas": ["ANXIETY", "DEPRESSION"] }
+     * Add or update expertise areas for logged-in therapist.
      */
     @PostMapping
-    public ResponseEntity<?> addOrUpdateExpertiseAreas(
+    public ResponseEntity<List<TherapistAreaOfExpertiseResponse>> addOrUpdateExpertiseAreas(
+            @RequestHeader("Authorization") String authHeader,
             @RequestBody TherapistAreaOfExpertiseDTO dto
     ) {
-        try {
-            System.out.println("🔥 EXPERTISE CONTROLLER HIT");
-            System.out.println("Therapist ID: " + dto.getTherapistId());
-            System.out.println("Selected Areas: " + dto.getExpertiseAreas());
-
-            List<TherapistAreaOfExpertise> saved =
-                    expertiseService.addOrUpdateExpertiseAreas(dto);
-
-            return ResponseEntity.ok(saved);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        }
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(
+                expertiseService.addOrUpdateExpertiseAreas(token, dto)
+        );
     }
 
     /**
-     * GET: Get all expertise areas for a therapist
-     * Endpoint: /api/therapist/expertise/{therapistId}
+     * Get all expertise areas of logged-in therapist.
      */
-    @GetMapping("/{therapistId}")
-    public ResponseEntity<List<TherapistAreaOfExpertise>> getAllExpertiseAreas(
-            @PathVariable UUID therapistId // ✅ UUID parameter
+    @GetMapping
+    public ResponseEntity<List<TherapistAreaOfExpertiseResponse>> getAllExpertiseAreas(
+            @RequestHeader("Authorization") String authHeader
     ) {
-        List<TherapistAreaOfExpertise> areas =
-                expertiseService.getAllExpertiseAreas(therapistId);
-        return ResponseEntity.ok(areas);
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(
+                expertiseService.getAllExpertiseAreas(token)
+        );
     }
 
     /**
-     * DELETE: Delete all expertise areas for a therapist
-     * Endpoint: /api/therapist/expertise/{therapistId}
+     * Delete all expertise areas of logged-in therapist.
      */
-    @DeleteMapping("/{therapistId}")
+    @DeleteMapping
     public ResponseEntity<String> deleteAllExpertiseAreas(
-            @PathVariable UUID therapistId // ✅ UUID parameter
+            @RequestHeader("Authorization") String authHeader
     ) {
-        expertiseService.deleteAllExpertiseAreas(therapistId);
+        String token = authHeader.substring(7);
+        expertiseService.deleteAllExpertiseAreas(token);
         return ResponseEntity.ok("All expertise areas deleted successfully");
     }
 }

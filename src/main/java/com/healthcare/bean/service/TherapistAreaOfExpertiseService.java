@@ -1,10 +1,12 @@
 package com.healthcare.bean.service;
 
 import com.healthcare.bean.dto.TherapistAreaOfExpertiseDTO;
+import com.healthcare.bean.dto.TherapistAreaOfExpertiseResponse;
 import com.healthcare.bean.model.Therapist;
 import com.healthcare.bean.model.TherapistAreaOfExpertise;
 import com.healthcare.bean.repository.TherapistAreaOfExpertiseRepository;
 import com.healthcare.bean.repository.TherapistRepository;
+import com.healthcare.bean.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,61 +15,84 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Service for managing therapist areas of expertise.
+ * Therapist ownership is resolved securely using JWT.
+ */
 @Service
 @RequiredArgsConstructor
 public class TherapistAreaOfExpertiseService {
 
     private final TherapistAreaOfExpertiseRepository expertiseRepository;
-    // ✅ TherapistProfileRepository hata ke TherapistRepository
     private final TherapistRepository therapistRepository;
+    private final JwtUtil jwtUtil;
 
     /**
-     * Add or Update expertise areas for a therapist
-     * This method deletes old areas and adds new ones to avoid duplicates
+     * Add or update expertise areas for logged-in therapist.
+     * Existing expertise is removed before inserting new ones.
      */
     @Transactional
-    public List<TherapistAreaOfExpertise> addOrUpdateExpertiseAreas(
+    public List<TherapistAreaOfExpertiseResponse> addOrUpdateExpertiseAreas(
+            String token,
             TherapistAreaOfExpertiseDTO dto
     ) {
-        // ✅ Step 1: Find Therapist (UUID)
-        Therapist therapist = therapistRepository
-                .findById(dto.getTherapistId())
-                .orElseThrow(() -> new RuntimeException(
-                        "Therapist with ID " + dto.getTherapistId() + " not found"
-                ));
+        UUID therapistId = jwtUtil.extractTherapistId(token);
 
-        // ✅ Step 2: Delete existing expertise areas for this therapist
-        expertiseRepository.deleteByTherapistId(dto.getTherapistId());
+        Therapist therapist = therapistRepository.findById(therapistId)
+                .orElseThrow(() -> new RuntimeException("Therapist not found"));
 
-        // ✅ Step 3: Create new expertise area objects
-        List<TherapistAreaOfExpertise> expertiseList = dto.getExpertiseAreas()
+        // Remove existing expertise areas
+        expertiseRepository.deleteByTherapist_Id(therapistId);
+
+        // Save new expertise areas
+        List<TherapistAreaOfExpertise> savedList =
+                dto.getExpertiseAreas()
+                        .stream()
+                        .map(area -> {
+                            TherapistAreaOfExpertise expertise =
+                                    new TherapistAreaOfExpertise();
+                            expertise.setExpertiseArea(area.toUpperCase());
+                            expertise.setTherapist(therapist);
+                            return expertise;
+                        })
+                        .toList();
+
+        return expertiseRepository.saveAll(savedList)
                 .stream()
-                .map(area -> {
-                    TherapistAreaOfExpertise expertise = new TherapistAreaOfExpertise();
-                    expertise.setExpertiseArea(area.toUpperCase());
-                    expertise.setTherapist(therapist); // ✅ Therapist set kiya
-                    return expertise;
+                .map(e -> {
+                    TherapistAreaOfExpertiseResponse r =
+                            new TherapistAreaOfExpertiseResponse();
+                    r.setId(e.getId());
+                    r.setExpertiseArea(e.getExpertiseArea());
+                    return r;
                 })
                 .collect(Collectors.toList());
-
-        // Step 4: Save all areas at once
-        return expertiseRepository.saveAll(expertiseList);
     }
 
     /**
-     * Get all expertise areas for a therapist
+     * Get all expertise areas of logged-in therapist.
      */
-    public List<TherapistAreaOfExpertise> getAllExpertiseAreas(UUID therapistId) {
-        // ✅ UUID parameter
-        return expertiseRepository.findByTherapistId(therapistId);
+    public List<TherapistAreaOfExpertiseResponse> getAllExpertiseAreas(String token) {
+        UUID therapistId = jwtUtil.extractTherapistId(token);
+
+        return expertiseRepository.findByTherapist_Id(therapistId)
+                .stream()
+                .map(e -> {
+                    TherapistAreaOfExpertiseResponse r =
+                            new TherapistAreaOfExpertiseResponse();
+                    r.setId(e.getId());
+                    r.setExpertiseArea(e.getExpertiseArea());
+                    return r;
+                })
+                .toList();
     }
 
     /**
-     * Delete all expertise areas for a therapist
+     * Delete all expertise areas of logged-in therapist.
      */
     @Transactional
-    public void deleteAllExpertiseAreas(UUID therapistId) {
-        // ✅ UUID parameter
-        expertiseRepository.deleteByTherapistId(therapistId);
+    public void deleteAllExpertiseAreas(String token) {
+        UUID therapistId = jwtUtil.extractTherapistId(token);
+        expertiseRepository.deleteByTherapist_Id(therapistId);
     }
 }

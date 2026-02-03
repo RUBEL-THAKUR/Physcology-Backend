@@ -1,6 +1,7 @@
 package com.healthcare.bean.controller;
 
 import com.healthcare.bean.dto.TherapistProfessionalMembershipDTO;
+import com.healthcare.bean.dto.TherapistProfessionalMembershipResponse;
 import com.healthcare.bean.model.TherapistProfessionalMembership;
 import com.healthcare.bean.service.TherapistProfessionalMembershipService;
 import lombok.RequiredArgsConstructor;
@@ -8,8 +9,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
+/**
+ * REST controller for therapist professional memberships.
+ */
 @RestController
 @RequestMapping("/api/therapist/memberships")
 @RequiredArgsConstructor
@@ -18,62 +21,60 @@ public class TherapistProfessionalMembershipController {
     private final TherapistProfessionalMembershipService membershipService;
 
     /**
-     * POST: Add new professional membership
-     * Endpoint: /api/therapist/memberships
+     * Add new professional membership for logged-in therapist.
      */
     @PostMapping
-    public ResponseEntity<?> addMembership(
+    public ResponseEntity<TherapistProfessionalMembership> addMembership(
+            @RequestHeader("Authorization") String authHeader,
             @RequestBody TherapistProfessionalMembershipDTO dto
     ) {
-        try {
-            System.out.println("🎓 MEMBERSHIP CONTROLLER HIT");
-            System.out.println("DTO: " + dto);
-
-            TherapistProfessionalMembership saved = membershipService.addMembership(dto);
-            return ResponseEntity.ok(saved);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        }
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(
+                membershipService.addMembership(token, dto)
+        );
     }
 
     /**
-     * GET: Get all memberships for a therapist
-     * Endpoint: /api/therapist/memberships/{therapistId}
+     * Get all professional memberships of logged-in therapist.
      */
-    @GetMapping("/{therapistId}")
-    public ResponseEntity<List<TherapistProfessionalMembership>> getAllMemberships(
-            @PathVariable UUID therapistId // ✅ UUID parameter
+    @GetMapping
+    public ResponseEntity<List<TherapistProfessionalMembershipResponse>>
+    getAllMemberships(
+            @RequestHeader("Authorization") String authHeader
     ) {
-        return ResponseEntity.ok(membershipService.getAllMemberships(therapistId));
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(
+                membershipService.getAllMemberships(token)
+        );
     }
 
     /**
-     * PUT: Update a membership
-     * Endpoint: /api/therapist/memberships/{membershipId}
+     * Update a professional membership owned by logged-in therapist.
      */
     @PutMapping("/{membershipId}")
     public ResponseEntity<?> updateMembership(
+            @RequestHeader("Authorization") String authHeader,
             @PathVariable Long membershipId,
             @RequestBody TherapistProfessionalMembershipDTO dto
     ) {
-        try {
-            TherapistProfessionalMembership updated =
-                    membershipService.updateMembership(membershipId, dto);
-            return ResponseEntity.ok(updated);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        }
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(
+                membershipService.updateMembership(
+                        token, membershipId, dto)
+        );
     }
 
     /**
-     * DELETE: Delete a membership
-     * Endpoint: /api/therapist/memberships/{membershipId}
+     * Delete a professional membership owned by logged-in therapist.
      */
     @DeleteMapping("/{membershipId}")
-    public ResponseEntity<String> deleteMembership(@PathVariable Long membershipId) {
-        membershipService.deleteMembership(membershipId);
-        return ResponseEntity.ok("Membership deleted successfully");
+    public ResponseEntity<String> deleteMembership(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long membershipId
+    ) {
+        String token = authHeader.substring(7);
+        membershipService.deleteMembership(token, membershipId);
+        return ResponseEntity.ok(
+                "Membership deleted successfully");
     }
 }

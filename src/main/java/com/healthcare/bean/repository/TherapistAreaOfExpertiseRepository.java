@@ -7,13 +7,14 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Repository for therapist area of expertise.
+ */
 @Repository
 public interface TherapistAreaOfExpertiseRepository
         extends JpaRepository<TherapistAreaOfExpertise, Long> {
 
+    List<TherapistAreaOfExpertise> findByTherapist_Id(UUID therapistId);
 
-    List<TherapistAreaOfExpertise> findByTherapistId(UUID therapistId);
-
-
-    void deleteByTherapistId(UUID therapistId);
+    void deleteByTherapist_Id(UUID therapistId);
 }

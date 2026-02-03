@@ -1,10 +1,11 @@
 package com.healthcare.bean.service;
 
+import com.healthcare.bean.constant.AppConstants;
 import com.healthcare.bean.dto.AppointmentDTO;
 import com.healthcare.bean.exception.ResourceNotFoundException;
 import com.healthcare.bean.model.Appointment;
 import com.healthcare.bean.repository.AppointmentRepository;
-import com.healthcare.bean.util.AppConstants;
+//import com.healthcare.bean.util.AppConstants;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

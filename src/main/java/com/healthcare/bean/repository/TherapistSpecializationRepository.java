@@ -7,13 +7,14 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Repository for therapist specializations.
+ */
 @Repository
 public interface TherapistSpecializationRepository
         extends JpaRepository<TherapistSpecialization, Long> {
 
+    List<TherapistSpecialization> findByTherapist_Id(UUID therapistId);
 
-    List<TherapistSpecialization> findByTherapistId(UUID therapistId);
-
-
-    void deleteByTherapistId(UUID therapistId);
+    void deleteByTherapist_Id(UUID therapistId);
 }

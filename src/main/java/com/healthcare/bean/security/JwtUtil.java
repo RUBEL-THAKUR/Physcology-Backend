@@ -1,5 +1,6 @@
 package com.healthcare.bean.security;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Base64;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtUtil {
@@ -20,29 +22,52 @@ public class JwtUtil {
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration}") long expirationTime
     ) {
-        // ✅ Base64 decode
         byte[] keyBytes = Base64.getDecoder().decode(secret);
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.expirationTime = expirationTime;
     }
 
-    public String generateToken(String username) {
-
+    // ✅ NON-STATIC METHOD
+    public String generateToken(UUID therapistId, String email) {
         return Jwts.builder()
-                .setSubject(username)
+                .setSubject(email)
+                .claim("therapistId", therapistId.toString())
+                .claim("role", "THERAPIST")
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    public String extractUsername(String token) {
-
+    public Claims getClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+                .getBody();
+    }
+
+    public UUID extractTherapistId(String token) {
+        return UUID.fromString(getClaims(token).get("therapistId", String.class));
+    }
+
+    public String extractRole(String token) {
+        return getClaims(token).get("role", String.class);
+    }
+
+    public String extractEmail(String token) {
+        return getClaims(token).getSubject();
+    }
+
+    public String generateAdminToken(UUID adminId, String email) {
+
+        return Jwts.builder()
+                .setSubject(email)
+                .claim("adminId", adminId.toString())
+                .claim("role", "ADMIN")
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
     }
 }

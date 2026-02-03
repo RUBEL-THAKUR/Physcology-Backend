@@ -7,9 +7,14 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Repository for therapist awards.
+ */
 @Repository
-public interface TherapistAwardRepository extends JpaRepository<TherapistAward, Long> {
+public interface TherapistAwardRepository
+        extends JpaRepository<TherapistAward, Long> {
 
+    List<TherapistAward> findByTherapist_Id(UUID therapistId);
 
-    List<TherapistAward> findByTherapistId(UUID therapistId);
+    int deleteByIdAndTherapist_Id(Long id, UUID therapistId);
 }

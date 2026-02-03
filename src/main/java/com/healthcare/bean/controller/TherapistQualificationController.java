@@ -3,6 +3,7 @@ package com.healthcare.bean.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.healthcare.bean.dto.TherapistQualificationDTO;
+import com.healthcare.bean.dto.TherapistQualificationResponse;
 import com.healthcare.bean.model.TherapistQualification;
 import com.healthcare.bean.service.TherapistQualificationService;
 import lombok.RequiredArgsConstructor;
@@ -12,8 +13,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.UUID;
 
+/**
+ * REST controller for therapist qualification onboarding.
+ */
 @RestController
 @RequestMapping("/api/therapist/qualification")
 @RequiredArgsConstructor
@@ -21,42 +24,52 @@ public class TherapistQualificationController {
 
     private final TherapistQualificationService qualificationService;
 
+    /**
+     * Add qualification for logged-in therapist.
+     */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> addQualification(
+    public ResponseEntity<TherapistQualification> addQualification(
+            @RequestHeader("Authorization") String authHeader,
             @RequestPart("data") String dataJson,
             @RequestPart(value = "document", required = false) MultipartFile document
-    ) {
-        try {
-            System.out.println("🔥 QUALIFICATION CONTROLLER HIT");
-            System.out.println("JSON received: " + dataJson);
+    ) throws Exception {
 
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.registerModule(new JavaTimeModule());
-            TherapistQualificationDTO dto = mapper.readValue(dataJson, TherapistQualificationDTO.class);
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
 
-            System.out.println("DTO: " + dto);
-            System.out.println("Document: " + (document != null ? document.getOriginalFilename() : "No file"));
+        TherapistQualificationDTO dto =
+                mapper.readValue(dataJson, TherapistQualificationDTO.class);
 
-            TherapistQualification saved = qualificationService.addQualification(dto, document);
-            return ResponseEntity.ok(saved);
+        String token = authHeader.substring(7);
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        }
+        return ResponseEntity.ok(
+                qualificationService.addQualification(token, dto, document)
+        );
     }
 
-    // ✅ UUID parameter
-    @GetMapping("/{therapistId}")
-    public ResponseEntity<List<TherapistQualification>> getAllQualifications(
-            @PathVariable UUID therapistId
+    /**
+     * Get all qualifications of logged-in therapist.
+     */
+    @GetMapping
+    public ResponseEntity<List<TherapistQualificationResponse>> getAllQualifications(
+            @RequestHeader("Authorization") String authHeader
     ) {
-        return ResponseEntity.ok(qualificationService.getAllQualifications(therapistId));
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(
+                qualificationService.getAllQualifications(token)
+        );
     }
 
+    /**
+     * Delete qualification owned by logged-in therapist.
+     */
     @DeleteMapping("/{qualificationId}")
-    public ResponseEntity<String> deleteQualification(@PathVariable Long qualificationId) {
-        qualificationService.deleteQualification(qualificationId);
+    public ResponseEntity<String> deleteQualification(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long qualificationId
+    ) {
+        String token = authHeader.substring(7);
+        qualificationService.deleteQualification(token, qualificationId);
         return ResponseEntity.ok("Qualification deleted successfully");
     }
 }

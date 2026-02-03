@@ -1,73 +1,99 @@
 package com.healthcare.bean.service;
 
 import com.healthcare.bean.dto.TherapistProfessionalMembershipDTO;
+import com.healthcare.bean.dto.TherapistProfessionalMembershipResponse;
 import com.healthcare.bean.model.Therapist;
 import com.healthcare.bean.model.TherapistProfessionalMembership;
 import com.healthcare.bean.repository.TherapistProfessionalMembershipRepository;
 import com.healthcare.bean.repository.TherapistRepository;
+import com.healthcare.bean.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Service for managing therapist professional memberships.
+ * Therapist ownership is resolved securely using JWT.
+ */
 @Service
 @RequiredArgsConstructor
 public class TherapistProfessionalMembershipService {
 
     private final TherapistProfessionalMembershipRepository membershipRepository;
-    // ✅ TherapistProfileRepository hata ke TherapistRepository
     private final TherapistRepository therapistRepository;
+    private final JwtUtil jwtUtil;
 
     /**
-     * Add new professional membership
+     * Add a new professional membership for logged-in therapist.
      */
-    public TherapistProfessionalMembership addMembership(TherapistProfessionalMembershipDTO dto) {
+    @Transactional
+    public TherapistProfessionalMembership addMembership(
+            String token,
+            TherapistProfessionalMembershipDTO dto
+    ) {
+        UUID therapistId = jwtUtil.extractTherapistId(token);
 
-        // ✅ Find Therapist (UUID)
-        Therapist therapist = therapistRepository.findById(dto.getTherapistId())
-                .orElseThrow(() -> new RuntimeException(
-                        "Therapist with ID " + dto.getTherapistId() + " not found"
-                ));
+        Therapist therapist = therapistRepository.findById(therapistId)
+                .orElseThrow(() -> new RuntimeException("Therapist not found"));
 
-        // Create membership entity
-        TherapistProfessionalMembership membership = new TherapistProfessionalMembership();
+        TherapistProfessionalMembership membership =
+                new TherapistProfessionalMembership();
         membership.setProfessionalBodyName(dto.getProfessionalBodyName());
         membership.setMembershipName(dto.getMembershipName());
         membership.setMembershipNumber(dto.getMembershipNumber());
         membership.setYear(dto.getYear());
         membership.setValidityPeriod(dto.getValidityPeriod());
-        membership.setTherapist(therapist); // ✅ Therapist set kiya
+        membership.setTherapist(therapist);
 
         return membershipRepository.save(membership);
     }
 
     /**
-     * Get all memberships for a therapist
+     * Get all memberships of logged-in therapist.
+     * Uses response DTO to avoid Hibernate proxy serialization issues.
      */
-    public List<TherapistProfessionalMembership> getAllMemberships(UUID therapistId) {
-        // ✅ UUID parameter
-        return membershipRepository.findByTherapistId(therapistId);
+    public List<TherapistProfessionalMembershipResponse> getAllMemberships(
+            String token
+    ) {
+        UUID therapistId = jwtUtil.extractTherapistId(token);
+
+        return membershipRepository.findByTherapist_Id(therapistId)
+                .stream()
+                .map(m -> {
+                    TherapistProfessionalMembershipResponse r =
+                            new TherapistProfessionalMembershipResponse();
+                    r.setId(m.getId());
+                    r.setProfessionalBodyName(m.getProfessionalBodyName());
+                    r.setMembershipName(m.getMembershipName());
+                    r.setMembershipNumber(m.getMembershipNumber());
+                    r.setYear(m.getYear());
+                    r.setValidityPeriod(m.getValidityPeriod());
+                    return r;
+                })
+                .toList();
     }
 
     /**
-     * Delete a membership
+     * Update a membership owned by logged-in therapist.
      */
-    public void deleteMembership(Long membershipId) {
-        membershipRepository.deleteById(membershipId);
-    }
-
-    /**
-     * Update a membership
-     */
+    @Transactional
     public TherapistProfessionalMembership updateMembership(
+            String token,
             Long membershipId,
             TherapistProfessionalMembershipDTO dto
     ) {
-        TherapistProfessionalMembership membership = membershipRepository.findById(membershipId)
-                .orElseThrow(() -> new RuntimeException(
-                        "Membership not found with ID: " + membershipId
-                ));
+        UUID therapistId = jwtUtil.extractTherapistId(token);
+
+        TherapistProfessionalMembership membership =
+                membershipRepository.findById(membershipId)
+                        .filter(m ->
+                                m.getTherapist().getId().equals(therapistId))
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Membership not found or access denied"));
 
         membership.setProfessionalBodyName(dto.getProfessionalBodyName());
         membership.setMembershipName(dto.getMembershipName());
@@ -76,5 +102,22 @@ public class TherapistProfessionalMembershipService {
         membership.setValidityPeriod(dto.getValidityPeriod());
 
         return membershipRepository.save(membership);
+    }
+
+    /**
+     * Delete a membership owned by logged-in therapist.
+     */
+    @Transactional
+    public void deleteMembership(String token, Long membershipId) {
+        UUID therapistId = jwtUtil.extractTherapistId(token);
+
+        int deleted =
+                membershipRepository.deleteByIdAndTherapist_Id(
+                        membershipId, therapistId);
+
+        if (deleted == 0) {
+            throw new RuntimeException(
+                    "Membership not found or access denied");
+        }
     }
 }

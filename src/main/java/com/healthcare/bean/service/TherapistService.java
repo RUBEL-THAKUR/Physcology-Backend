@@ -4,7 +4,9 @@ import com.healthcare.bean.dto.*;
 import com.healthcare.bean.model.Therapist;
 import com.healthcare.bean.model.TherapistStatus;
 import com.healthcare.bean.repository.TherapistRepository;
+import com.healthcare.bean.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,10 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class TherapistService {
+
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     private final TherapistRepository therapistRepository;
     private final PasswordEncoder passwordEncoder;
@@ -73,7 +79,8 @@ public class TherapistService {
     }
 
     // LOGIN
-    public TherapistResponseDTO loginTherapist(TherapistLoginRequest request) {
+    public TherapistLoginResponseDTO loginTherapist(TherapistLoginRequest request) {
+
         Therapist therapist = therapistRepository.findByEmailId(request.getEmailId())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
@@ -85,8 +92,17 @@ public class TherapistService {
             throw new IllegalArgumentException("Your account is " + therapist.getStatus());
         }
 
-        return toResponseDTO(therapist);
+        // ✅ CORRECT WAY
+        String token = jwtUtil.generateToken(
+                therapist.getId(),
+                therapist.getEmailId()
+        );
+
+        return new TherapistLoginResponseDTO(token, toResponseDTO(therapist));
     }
+
+
+
 
     // GET BY ID
     public TherapistResponseDTO getTherapistById(UUID id) {

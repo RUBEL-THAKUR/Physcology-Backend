@@ -1,4 +1,4 @@
-package com.healthcare.bean.util;
+package com.healthcare.bean.constant;
 
 public class AppConstants {
     public static final String APPOINTMENT_NOT_FOUND = "Appointment not found";

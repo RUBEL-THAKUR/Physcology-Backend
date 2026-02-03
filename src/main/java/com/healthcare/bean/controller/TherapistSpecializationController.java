@@ -1,15 +1,17 @@
 package com.healthcare.bean.controller;
 
 import com.healthcare.bean.dto.TherapistSpecializationDTO;
-import com.healthcare.bean.model.TherapistSpecialization;
+import com.healthcare.bean.dto.TherapistSpecializationResponse;
 import com.healthcare.bean.service.TherapistSpecializationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
+/**
+ * REST controller for therapist specializations.
+ */
 @RestController
 @RequestMapping("/api/therapist/specializations")
 @RequiredArgsConstructor
@@ -18,48 +20,44 @@ public class TherapistSpecializationController {
     private final TherapistSpecializationService specializationService;
 
     /**
-     * POST: Add or Update specializations
-     * Endpoint: /api/therapist/specializations
+     * Add or update specializations for logged-in therapist.
      */
     @PostMapping
-    public ResponseEntity<?> addOrUpdateSpecializations(
+    public ResponseEntity<List<TherapistSpecializationResponse>>
+    addOrUpdateSpecializations(
+            @RequestHeader("Authorization") String authHeader,
             @RequestBody TherapistSpecializationDTO dto
     ) {
-        try {
-            System.out.println("🎓 SPECIALIZATION CONTROLLER HIT");
-            System.out.println("DTO: " + dto);
-
-            List<TherapistSpecialization> saved =
-                    specializationService.addOrUpdateSpecializations(dto);
-
-            return ResponseEntity.ok(saved);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
-        }
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(
+                specializationService.addOrUpdateSpecializations(token, dto)
+        );
     }
 
     /**
-     * GET: Get all specializations for a therapist
-     * Endpoint: /api/therapist/specializations/{therapistId}
+     * Get all specializations of logged-in therapist.
      */
-    @GetMapping("/{therapistId}")
-    public ResponseEntity<List<TherapistSpecialization>> getAllSpecializations(
-            @PathVariable UUID therapistId // ✅ UUID parameter
+    @GetMapping
+    public ResponseEntity<List<TherapistSpecializationResponse>>
+    getAllSpecializations(
+            @RequestHeader("Authorization") String authHeader
     ) {
-        return ResponseEntity.ok(specializationService.getAllSpecializations(therapistId));
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(
+                specializationService.getAllSpecializations(token)
+        );
     }
 
     /**
-     * DELETE: Delete all specializations for a therapist
-     * Endpoint: /api/therapist/specializations/{therapistId}
+     * Delete all specializations of logged-in therapist.
      */
-    @DeleteMapping("/{therapistId}")
+    @DeleteMapping
     public ResponseEntity<String> deleteAllSpecializations(
-            @PathVariable UUID therapistId // ✅ UUID parameter
+            @RequestHeader("Authorization") String authHeader
     ) {
-        specializationService.deleteAllSpecializations(therapistId);
-        return ResponseEntity.ok("All specializations deleted successfully");
+        String token = authHeader.substring(7);
+        specializationService.deleteAllSpecializations(token);
+        return ResponseEntity.ok(
+                "All specializations deleted successfully");
     }
 }

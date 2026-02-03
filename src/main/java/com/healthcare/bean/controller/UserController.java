@@ -26,10 +26,10 @@ public class UserController {
         return ResponseEntity.ok(userService.signupUser(r));
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> loginUser(@RequestBody LoginRequest r) {
-        return ResponseEntity.ok(userService.loginUser(r));
-    }
+//    @PostMapping("/login")
+//    public ResponseEntity<LoginResponse> loginUser(@RequestBody LoginRequest r) {
+//        return ResponseEntity.ok(userService.loginUser(r));
+//    }
 
     @PostMapping("/request-otp")
     public ResponseEntity<String> requestOtp(@RequestBody LoginRequest request){
